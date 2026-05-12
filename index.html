@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>副班長分帳</title>
+<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#FBF7F0;--cream2:#F0E9DC;--cream3:#E8DECE;
+  --brown:#4A3728;--brown2:#7A5C4A;--brown3:#A88060;
+  --green:#6FA84A;--green-d:#4E7A33;--green-l:#EBF5E0;
+  --pink:#F4967A;--pink-l:#FEF1EC;
+  --yellow:#F9D45A;--yellow-l:#FFFBEA;
+  --red:#D95F5F;--red-l:#FCEAEA;
+  --shadow:0 3px 16px rgba(74,55,40,0.10);
+  --r:18px;--r-sm:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--brown);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(74,55,40,0.05) 1.5px,transparent 1.5px);background-size:26px 26px;pointer-events:none;z-index:0}
+
+/* ── Pages (slide animation) ── */
+.pages{position:relative;width:100%;overflow:hidden}
+.page{position:absolute;top:0;left:0;width:100%;min-height:100vh;background:var(--cream);transition:transform .3s cubic-bezier(.4,0,.2,1);will-change:transform;padding-bottom:90px}
+.page.p-home{transform:translateX(0)}
+.page.p-detail{transform:translateX(100%)}
+.page.p-home.slide-out{transform:translateX(-30%)}
+.page.p-detail.slide-in{transform:translateX(0)}
+
+/* ── Header ── */
+.hdr{height:60px;display:flex;align-items:center;gap:10px;padding:0 14px;box-shadow:0 3px 0 rgba(0,0,0,0.08);position:sticky;top:0;z-index:100;background:var(--green)}
+.hdr-back{width:36px;height:36px;border-radius:50%;border:2px solid rgba(255,255,255,0.5);background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;font-size:18px;color:white}
+.hdr-back:active{background:rgba(255,255,255,0.3)}
+.hdr-icon{width:42px;height:42px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid rgba(255,255,255,0.5);flex-shrink:0}
+.hdr-title{font-family:'Nunito',sans-serif;font-size:18px;font-weight:900;color:white;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr-sub{font-size:11px;color:rgba(255,255,255,0.8);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr-av{width:32px;height:32px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);object-fit:cover;flex-shrink:0}
+
+/* ── Detail Tabs ── */
+.tabs{display:flex;background:white;border-bottom:2px solid var(--cream2);position:sticky;top:60px;z-index:99}
+.tab{flex:1;padding:10px 4px 8px;border:none;background:none;cursor:pointer;font-family:'Noto Sans TC',sans-serif;font-size:12px;font-weight:500;color:var(--brown3);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s}
+.tab span{display:block;font-size:20px;margin-bottom:2px}
+.tab.active{color:var(--green-d);border-bottom-color:var(--green);font-weight:700}
+
+/* ── Content ── */
+.pg{padding:12px;position:relative;z-index:1}
+.sec{display:none}.sec.active{display:block}
+
+/* ── Cards ── */
+.card{background:white;border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:10px;border:1.5px solid rgba(74,55,40,0.08);overflow:hidden}
+.card-hd{padding:13px 15px 8px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.card-title{font-size:15px;font-weight:700}
+.card-sub{font-size:12px;color:var(--brown3);margin-top:3px}
+.card-bd{padding:0 15px 13px}
+
+/* ── Book list (home) ── */
+.book-row{display:flex;align-items:center;gap:11px;padding:14px 15px;cursor:pointer;border-bottom:1px solid var(--cream2);transition:background .15s;min-height:68px}
+.book-row:last-child{border-bottom:none}
+.book-row:active{background:var(--cream)}
+.book-ico{width:44px;height:44px;border-radius:14px;background:var(--green-l);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.book-info{flex:1;min-width:0}
+.book-name{font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.book-meta{font-size:11px;color:var(--brown3);margin-top:3px}
+.book-amt{font-size:17px;font-weight:900;color:var(--green-d);font-family:'Nunito',sans-serif;text-align:right;flex-shrink:0}
+.book-cnt{font-size:10px;color:var(--brown3);text-align:right;margin-top:2px}
+.book-arr{font-size:18px;color:var(--brown3);flex-shrink:0;margin-left:4px}
+
+/* ── Expense list ── */
+.exp-row{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;border-bottom:1px solid var(--cream2);cursor:pointer;transition:background .15s}
+.exp-row:last-child{border-bottom:none}
+.exp-row:active{background:var(--cream)}
+.exp-ico{width:36px;height:36px;border-radius:11px;background:var(--yellow-l);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;margin-top:1px}
+.exp-desc{font-size:14px;font-weight:700}
+.exp-meta{font-size:11px;color:var(--brown3);margin-top:3px;line-height:1.5}
+.exp-amt{font-size:15px;font-weight:900;font-family:'Nunito',sans-serif;color:var(--brown);text-align:right;flex-shrink:0;white-space:nowrap}
+.edit-hint{font-size:10px;color:var(--brown3);text-align:right;margin-top:2px}
+
+/* ── Settle ── */
+.settle-row{display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--cream2)}
+.settle-row:last-child{border-bottom:none}
+.smry-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--cream2);font-size:13px}
+.smry-row:last-child{border-bottom:none}
+
+/* ── Buttons ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;border-radius:var(--r-sm);font-family:'Noto Sans TC',sans-serif;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(0.97)}
+.btn-g{background:var(--green);color:white}.btn-g:active{background:var(--green-d)}
+.btn-ol{background:white;color:var(--green-d);border:2px solid var(--green)}
+.btn-rl{background:white;color:var(--red);border:1.5px solid var(--red)}
+.btn-gray{background:var(--cream2);color:var(--brown3)}
+.btn-sm{padding:7px 13px;font-size:12px;border-radius:8px;width:auto}
+.mt8{margin-top:8px}.mt10{margin-top:10px}.mt12{margin-top:12px}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── Chips ── */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{padding:8px 15px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid rgba(74,55,40,0.15);background:var(--cream);cursor:pointer;color:var(--brown);transition:all .15s;min-height:36px;display:flex;align-items:center}
+.chip:active{transform:scale(0.95)}
+.chip.on{background:var(--green);color:white;border-color:var(--green)}
+.chip.del-chip{background:var(--pink-l);color:var(--red);border-color:rgba(217,95,95,0.3)}
+
+/* ── Amount pad ── */
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.pad-btn{padding:14px;border-radius:12px;border:1.5px solid var(--cream3);background:white;font-size:18px;font-weight:700;color:var(--brown);cursor:pointer;text-align:center;transition:all .15s;font-family:'Nunito',sans-serif}
+.pad-btn:active{background:var(--cream2);transform:scale(0.95)}
+.pad-btn.zero{grid-column:span 2}
+.pad-btn.del-btn-pad{background:var(--cream2)}
+.amt-disp{font-family:'Nunito',sans-serif;font-size:32px;font-weight:900;color:var(--brown);text-align:center;padding:14px;background:var(--cream);border-radius:12px;margin-bottom:4px;min-height:64px;display:flex;align-items:center;justify-content:center}
+
+/* ── Modal ── */
+.m-bg{position:fixed;inset:0;background:rgba(74,55,40,0.35);z-index:200;display:none;align-items:flex-end}
+.m-bg.show{display:flex}
+.modal{background:white;border-radius:22px 22px 0 0;width:100%;padding:8px 18px 30px;max-height:90vh;overflow-y:auto;animation:up .3s cubic-bezier(.34,1.2,.64,1)}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.m-handle{width:38px;height:4px;background:var(--cream2);border-radius:2px;margin:10px auto 14px}
+.m-title{font-family:'Nunito',sans-serif;font-size:17px;font-weight:900;color:var(--brown);margin-bottom:14px}
+.m-label{font-size:11px;font-weight:700;color:var(--brown3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;display:block;margin-top:14px}
+.m-input{width:100%;padding:11px 13px;border-radius:10px;border:1.5px solid rgba(74,55,40,0.15);font-size:15px;font-family:'Noto Sans TC',sans-serif;background:var(--cream);color:var(--brown)}
+.m-input:focus{outline:none;border-color:var(--green);background:white}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:20px;right:18px;width:56px;height:56px;border-radius:28px;background:var(--green);color:white;border:none;font-size:28px;cursor:pointer;box-shadow:0 4px 18px rgba(111,168,74,.45);display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:150}
+.fab:active{transform:scale(0.91)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--brown);color:white;padding:10px 20px;border-radius:20px;font-size:14px;font-weight:500;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── Loading ── */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:14px;position:fixed;inset:0;background:var(--cream);z-index:999}
+.spin{width:42px;height:42px;border:3px solid var(--cream2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tags ── */
+.tag{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.tag-g{background:var(--green-l);color:var(--green-d)}
+.tag-r{background:var(--red-l);color:var(--red)}
+
+/* ── Section header ── */
+.sec-hd{font-family:'Nunito',sans-serif;font-size:12px;font-weight:900;color:var(--brown3);text-transform:uppercase;letter-spacing:1px;margin:14px 4px 6px}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:40px 20px;color:var(--brown3)}
+.empty em{display:block;font-size:48px;font-style:normal;margin-bottom:10px}
+.empty strong{font-size:15px;color:var(--brown);display:block}
+.empty span{font-size:13px;margin-top:6px;display:block}
+
+/* ── Home summary banner ── */
+.summary-banner{background:var(--green);border-radius:var(--r);padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+.banner-label{font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:4px}
+.banner-val{font-family:'Nunito',sans-serif;font-size:26px;font-weight:900;color:white}
+.banner-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px}
+</style>
+</head>
+<body>
+
+<div id="loading" class="loading">
+  <div style="font-size:50px">🤖</div>
+  <div class="spin"></div>
+  <div style="font-size:13px;color:var(--brown3);font-weight:500">副班長分帳載入中...</div>
+</div>
+
+<div id="app" style="display:none">
+<div class="pages" id="pages">
+
+  <!-- ══ 主頁：帳本列表 ══ -->
+  <div class="page p-home" id="pg-home">
+    <div class="hdr">
+      <div class="hdr-icon">🤖</div>
+      <div style="flex:1;min-width:0">
+        <div class="hdr-title">副班長分帳</div>
+      </div>
+      <img id="av" class="hdr-av" src="" alt="" style="display:none">
+    </div>
+
+    <div class="pg">
+      <div id="home-banner"></div>
+      <div id="home-books"></div>
+      <button class="btn btn-g mt12" onclick="openBookModal(null)">＋ 建立新帳本</button>
+    </div>
+  </div>
+
+  <!-- ══ 詳細頁：支出 + 結算 ══ -->
+  <div class="page p-detail" id="pg-detail">
+    <div class="hdr">
+      <div class="hdr-back" onclick="goHome()">←</div>
+      <div style="flex:1;min-width:0">
+        <div class="hdr-title" id="detail-title">帳本</div>
+        <div class="hdr-sub" id="detail-sub"></div>
+      </div>
+      <button style="background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.5);color:white;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans TC',sans-serif" onclick="openBookModal(S.curId)">編輯</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="goTab('expenses')"><span>💳</span>支出</button>
+      <button class="tab" onclick="goTab('settle')"><span>🧮</span>結算</button>
+    </div>
+
+    <div class="pg">
+      <div id="s-expenses" class="sec active"></div>
+      <div id="s-settle" class="sec"></div>
+    </div>
+  </div>
+
+</div><!-- /pages -->
+</div><!-- /app -->
+
+<button class="fab" id="fab" onclick="openExpModal(null)" style="display:none">＋</button>
+<div class="toast" id="toast"></div>
+
+<!-- Modal: 帳本 -->
+<div class="m-bg" id="m-book"><div class="modal">
+  <div class="m-handle"></div>
+  <div class="m-title" id="m-book-title">📚 建立新帳本</div>
+  <span class="m-label">帳本名稱</span>
+  <input class="m-input" id="i-bkname" placeholder="例如：五月聚餐" maxlength="20">
+  <span class="m-label">選擇成員（點選）</span>
+  <div id="chips-bk" class="chips"></div>
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    <input class="m-input" id="i-bkextra" placeholder="手動輸入名字（選填）" maxlength="10" style="flex:1">
+    <button class="btn btn-ol btn-sm" onclick="addExtraChip('chips-bk','i-bkextra')">加入</button>
+  </div>
+  <div id="bk-sel-preview" style="font-size:12px;color:var(--green-d);margin-top:8px;min-height:18px"></div>
+  <button class="btn btn-g mt12" onclick="saveBook()">✓ 儲存</button>
+  <button class="btn btn-gray mt8" onclick="closeM('m-book')">取消</button>
+</div></div>
+
+<!-- Modal: 支出 -->
+<div class="m-bg" id="m-exp"><div class="modal">
+  <div class="m-handle"></div>
+  <div class="m-title" id="m-exp-title">💳 新增支出</div>
+  <input type="hidden" id="i-exp-id">
+
+  <span class="m-label">說明（點選快速套用）</span>
+  <div class="chips" id="chips-desc-preset"></div>
+  <input class="m-input mt8" id="i-desc" placeholder="或自行輸入說明" maxlength="20">
+
+  <span class="m-label">金額（元）</span>
+  <div class="amt-disp" id="amt-display">$0</div>
+  <div class="pad">
+    <div class="pad-btn" onclick="padInput('1')">1</div><div class="pad-btn" onclick="padInput('2')">2</div><div class="pad-btn" onclick="padInput('3')">3</div>
+    <div class="pad-btn" onclick="padInput('4')">4</div><div class="pad-btn" onclick="padInput('5')">5</div><div class="pad-btn" onclick="padInput('6')">6</div>
+    <div class="pad-btn" onclick="padInput('7')">7</div><div class="pad-btn" onclick="padInput('8')">8</div><div class="pad-btn" onclick="padInput('9')">9</div>
+    <div class="pad-btn zero" onclick="padInput('0')">0</div><div class="pad-btn del-btn-pad" onclick="padDel()">⌫</div>
+  </div>
+
+  <span class="m-label">誰付的？</span>
+  <div id="chips-payer" class="chips"></div>
+
+  <span class="m-label">分攤對象</span>
+  <div style="display:flex;gap:8px;margin-bottom:6px">
+    <button class="btn btn-ol btn-sm" onclick="selectAllSplit()">全選</button>
+    <button class="btn btn-gray btn-sm" onclick="clearSplit()">清除</button>
+  </div>
+  <div id="chips-split" class="chips"></div>
+
+  <button class="btn btn-g mt12" onclick="saveExpense()">✓ 儲存</button>
+  <button id="btn-del-exp" class="btn btn-rl mt8" onclick="delExpense()" style="display:none">刪除這筆支出</button>
+  <button class="btn btn-gray mt8" onclick="closeM('m-exp')">取消</button>
+</div></div>
+
+<!-- Modal: 管理成員 -->
+<div class="m-bg" id="m-member"><div class="modal">
+  <div class="m-handle"></div>
+  <div class="m-title">👥 管理成員</div>
+  <p style="font-size:13px;color:var(--brown3);margin-bottom:10px">點選加入或移除成員</p>
+  <div id="chips-mbr" class="chips"></div>
+  <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+    <input class="m-input" id="i-mbrextra" placeholder="手動輸入名字" maxlength="10" style="flex:1">
+    <button class="btn btn-ol btn-sm" onclick="addExtraChip('chips-mbr','i-mbrextra')">加入</button>
+  </div>
+  <button class="btn btn-g mt12" onclick="saveMember()">✓ 儲存</button>
+  <button class="btn btn-gray mt8" onclick="closeM('m-member')">取消</button>
+</div></div>
+
+<!-- Modal: 確認 -->
+<div class="m-bg" id="m-confirm"><div class="modal">
+  <div class="m-handle"></div>
+  <div class="m-title">⚠️ 確認操作</div>
+  <p id="confirm-msg" style="font-size:14px;color:var(--brown2);line-height:1.7;margin-bottom:20px"></p>
+  <button id="confirm-ok" class="btn btn-g">確定</button>
+  <button class="btn btn-gray mt8" onclick="closeM('m-confirm')">取消</button>
+</div></div>
+
+<script>
+const LIFF_ID='2010052774-AyGqRPDF';
+const API='https://linebot-mktx.onrender.com';
+const DESCS=['晚餐','午餐','早餐','飲料','計程車','交通費','門票','住宿','購物','零食','咖啡','超商'];
+const EMOJI=[['餐','🍽️'],['飯','🍱'],['車','🚗'],['計程','🚕'],['住','🏨'],['購','🛍️'],['飲','🧋'],['咖啡','☕'],['超商','🏪'],['票','🎟️'],['禮','🎁'],['零食','🍿']];
+let S={user:null,gid:'default',books:[],curId:null,gMembers:[],padVal:'',pendingDelExp:null,pendingBkId:null};
+
+/* ── Init ── */
+async function init(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login();return;}
+    const[p,ctx]=await Promise.all([liff.getProfile(),Promise.resolve(liff.getContext())]);
+    S.user=p;S.gid=ctx?.groupId||'default';
+    const av=document.getElementById('av');
+    if(p.pictureUrl){av.src=p.pictureUrl;av.style.display='block';}
+  }catch(e){S.user={userId:'demo',displayName:'測試'};}
+  await Promise.all([loadBooks(),loadGMembers()]);
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+  drawHome();
+}
+
+async function apiFetch(path,method='GET',body=null){
+  try{
+    const o={method,headers:{'Content-Type':'application/json'}};
+    if(body)o.body=JSON.stringify(body);
+    return(await fetch(API+path,o)).json();
+  }catch(e){return null;}
+}
+async function loadBooks(){
+  const d=await apiFetch(`/splitbill/books?group=${S.gid}`);
+  S.books=d?.books||JSON.parse(localStorage.getItem('sb_'+S.gid)||'[]');
+}
+async function loadGMembers(){
+  const d=await apiFetch(`/splitbill/members?group=${S.gid}`);
+  S.gMembers=d?.members||[];
+}
+function saveLocal(){localStorage.setItem('sb_'+S.gid,JSON.stringify(S.books));}
+function cur(){return S.books.find(b=>b.id===S.curId);}
+
+/* ── Navigation ── */
+function goDetail(id){
+  S.curId=id;
+  const b=cur();
+  document.getElementById('detail-title').textContent=b.name;
+  document.getElementById('detail-sub').textContent=b.members.join('・')+'（'+b.members.length+'人）';
+  document.getElementById('fab').style.display=b.closed?'none':'flex';
+  document.getElementById('pg-home').classList.add('slide-out');
+  document.getElementById('pg-detail').classList.add('slide-in');
+  goTab('expenses');
+  drawExp();
+}
+
+function goHome(){
+  document.getElementById('pg-home').classList.remove('slide-out');
+  document.getElementById('pg-detail').classList.remove('slide-in');
+  document.getElementById('fab').style.display='none';
+  drawHome();
+}
+
+function goTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['expenses','settle'][i]===name));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+name).classList.add('active');
+  if(name==='settle')drawSettle();
+}
+
+/* ── 主頁 ── */
+function drawHome(){
+  const open=S.books.filter(b=>!b.closed);
+  const done=S.books.filter(b=>b.closed);
+  const totalAll=S.books.reduce((s,b)=>(b.expenses||[]).reduce((s2,e)=>s2+e.amount,s),0);
+
+  // Banner
+  const bannerEl=document.getElementById('home-banner');
+  if(S.books.length){
+    bannerEl.innerHTML=`<div class="summary-banner">
+      <div>
+        <div class="banner-label">所有帳本總支出</div>
+        <div class="banner-val">$${totalAll.toLocaleString()}</div>
+        <div class="banner-sub">${open.length} 個進行中・${done.length} 個已封存</div>
+      </div>
+      <div style="font-size:42px">💰</div>
+    </div>`;
+  } else {
+    bannerEl.innerHTML='';
+  }
+
+  // 帳本清單
+  const el=document.getElementById('home-books');
+  if(!S.books.length){
+    el.innerHTML=`<div class="empty"><em>📚</em><strong>還沒有帳本</strong><span>點下方按鈕建立第一個帳本！</span></div>`;
+    return;
+  }
+  let h='';
+  if(open.length){h+=`<div class="sec-hd">進行中</div><div class="card">${open.map(homeBookRow).join('')}</div>`;}
+  if(done.length){h+=`<div class="sec-hd">已封存</div><div class="card">${done.map(homeBookRow).join('')}</div>`;}
+  el.innerHTML=h;
+}
+
+function homeBookRow(b){
+  const total=(b.expenses||[]).reduce((s,e)=>s+e.amount,0);
+  return `<div class="book-row" onclick="goDetail('${b.id}')">
+    <div class="book-ico">${b.closed?'🔒':'📖'}</div>
+    <div class="book-info">
+      <div class="book-name">${b.name}</div>
+      <div class="book-meta">${b.members.join('・')}（${b.members.length}人）・${(b.expenses||[]).length}筆</div>
+    </div>
+    <div>
+      <div class="book-amt">$${total.toLocaleString()}</div>
+      <div class="book-cnt">${b.closed?'已封存':'進行中'}</div>
+    </div>
+    <div class="book-arr">›</div>
+  </div>`;
+}
+
+/* ── 帳本 Modal ── */
+function openBookModal(id){
+  const b=id?S.books.find(x=>x.id===id):null;
+  document.getElementById('m-book-title').textContent=b?'✏️ 編輯帳本':'📚 建立新帳本';
+  document.getElementById('i-bkname').value=b?.name||'';
+  document.getElementById('i-bkextra').value='';
+  document.getElementById('bk-sel-preview').textContent='';
+  const existing=b?.members||[];
+  const allMbrs=[...new Set([...S.gMembers,...existing])];
+  const chips=document.getElementById('chips-bk');
+  chips.innerHTML=allMbrs.map(m=>
+    `<div class="chip${existing.includes(m)?' on':''}" onclick="togChip(this);updBkPrev()">${m}</div>`
+  ).join('');
+  chips.dataset.bookId=id||'';
+  updBkPrev();
+  openM('m-book');
+}
+
+function updBkPrev(){
+  const s=getChips('chips-bk');
+  document.getElementById('bk-sel-preview').textContent=s.length?`已選：${s.join('、')}`:'';
+}
+
+async function saveBook(){
+  const name=document.getElementById('i-bkname').value.trim();
+  if(!name){toast('請輸入帳本名稱 📝');return;}
+  let members=getChips('chips-bk');
+  const extra=document.getElementById('i-bkextra').value.trim();
+  if(extra&&!members.includes(extra))members.push(extra);
+  if(!members.length){toast('請至少選一位成員 👋');return;}
+  const bkId=document.getElementById('chips-bk').dataset.bookId;
+  if(bkId){
+    const b=S.books.find(x=>x.id===bkId);
+    if(b){b.name=name;b.members=members;}
+    apiFetch('/splitbill/book/addmember','POST',{groupId:S.gid,bookId:bkId,members});
+    document.getElementById('detail-title').textContent=name;
+    document.getElementById('detail-sub').textContent=members.join('・')+'（'+members.length+'人）';
+    drawExp();
+  } else {
+    const book={id:Date.now().toString(),name,members,expenses:[],createdAt:new Date().toISOString(),closed:false};
+    S.books.unshift(book);
+    apiFetch('/splitbill/book','POST',{groupId:S.gid,book});
+    saveLocal();closeM('m-book');toast('帳本建立成功！📚');
+    goDetail(book.id);return;
+  }
+  saveLocal();closeM('m-book');toast('帳本已儲存 ✓');drawHome();
+}
+
+/* ── 管理成員 ── */
+function openMemberModal(){
+  const b=cur();if(!b)return;
+  const avail=[...new Set([...S.gMembers,...b.members])];
+  const chips=document.getElementById('chips-mbr');
+  chips.innerHTML=avail.map(m=>{
+    const isMbr=b.members.includes(m);
+    return `<div class="chip${isMbr?' on':''}" onclick="togChip(this)">${m}</div>`;
+  }).join('');
+  document.getElementById('i-mbrextra').value='';
+  openM('m-member');
+}
+
+async function saveMember(){
+  const b=cur();if(!b)return;
+  const selected=getChips('chips-mbr');
+  const manual=document.getElementById('i-mbrextra').value.trim();
+  if(manual&&!selected.includes(manual))selected.push(manual);
+  if(!selected.length){toast('至少保留一位成員');return;}
+  b.members=selected;
+  saveLocal();
+  apiFetch('/splitbill/book/addmember','POST',{groupId:S.gid,bookId:b.id,members:b.members});
+  closeM('m-member');toast('成員已更新 ✓');
+  document.getElementById('detail-sub').textContent=b.members.join('・')+'（'+b.members.length+'人）';
+  drawExp();drawHome();
+}
+
+/* ── 支出頁 ── */
+function drawExp(){
+  const el=document.getElementById('s-expenses');
+  const b=cur();if(!b)return;
+  const exps=b.expenses||[];
+  const total=exps.reduce((s,e)=>s+e.amount,0);
+  const per=b.members.length?Math.round(total/b.members.length):0;
+
+  let h=`<div class="card">
+    <div class="card-hd">
+      <div><div class="card-title">💰 總支出</div><div class="card-sub">${exps.length} 筆記錄</div></div>
+      <div style="text-align:right">
+        <div style="font-size:24px;font-weight:900;color:var(--green-d);font-family:'Nunito',sans-serif">$${total.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--brown3)">每人約 $${per.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="card-bd row-btns">
+      <button class="btn btn-ol btn-sm" onclick="openMemberModal()">👥 管理成員</button>
+      ${!b.closed
+        ?`<button class="btn btn-rl btn-sm" onclick="closeBk('${b.id}')">🔒 封存帳本</button>`
+        :`<button class="btn btn-g btn-sm" onclick="reopenBk('${b.id}')">📖 重新開啟</button>`}
+    </div>
+  </div>`;
+
+  if(!exps.length){
+    h+=`<div class="empty"><em>🧾</em><strong>還沒有支出</strong><span>點右下角 ＋ 新增第一筆</span></div>`;
+  } else {
+    h+=`<div class="card"><div>`;
+    h+=[...exps].reverse().map(e=>{
+      const ico=EMOJI.find(([k])=>e.desc.includes(k))?.[1]||'💰';
+      return `<div class="exp-row" onclick="openExpModal('${e.id}')">
+        <div class="exp-ico">${ico}</div>
+        <div style="flex:1;min-width:0">
+          <div class="exp-desc">${e.desc}</div>
+          <div class="exp-meta">${e.payer} 付・${e.splits.join('、')} 分攤</div>
+        </div>
+        <div>
+          <div class="exp-amt">$${e.amount.toLocaleString()}</div>
+          ${!b.closed?'<div class="edit-hint">點擊編輯</div>':''}
+        </div>
+      </div>`;
+    }).join('');
+    h+=`</div></div>`;
+  }
+  el.innerHTML=h;
+  document.getElementById('fab').style.display=b.closed?'none':'flex';
+}
+
+/* ── 支出 Modal ── */
+function openExpModal(expId){
+  const b=cur();if(!b)return;
+  const exp=expId?b.expenses?.find(e=>e.id===expId):null;
+  document.getElementById('m-exp-title').textContent=exp?'✏️ 編輯支出':'💳 新增支出';
+  document.getElementById('i-exp-id').value=exp?.id||'';
+  document.getElementById('i-desc').value=exp?.desc||'';
+  document.getElementById('btn-del-exp').style.display=exp?'flex':'none';
+  document.getElementById('chips-desc-preset').innerHTML=DESCS.map(d=>
+    `<div class="chip${exp?.desc===d?' on':''}" onclick="selDesc('${d}')">${d}</div>`
+  ).join('');
+  S.padVal=exp?String(exp.amount):'';updAmt();
+  document.getElementById('chips-payer').innerHTML=b.members.map(m=>
+    `<div class="chip${(exp?.payer===m||(!exp&&m===b.members[0]))?' on':''}" onclick="selPayer(this)">${m}</div>`
+  ).join('');
+  document.getElementById('chips-split').innerHTML=b.members.map(m=>
+    `<div class="chip${(!exp||exp.splits.includes(m))?' on':''}" onclick="togChip(this)">${m}</div>`
+  ).join('');
+  openM('m-exp');
+}
+
+function selDesc(d){
+  document.getElementById('i-desc').value=d;
+  document.querySelectorAll('#chips-desc-preset .chip').forEach(c=>c.classList.toggle('on',c.textContent===d));
+}
+function selPayer(el){
+  document.querySelectorAll('#chips-payer .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+function padInput(v){if(S.padVal.length>=7)return;S.padVal+=v;updAmt();}
+function padDel(){S.padVal=S.padVal.slice(0,-1);updAmt();}
+function updAmt(){document.getElementById('amt-display').textContent=`$${parseInt(S.padVal||'0').toLocaleString()}`;}
+function selectAllSplit(){document.querySelectorAll('#chips-split .chip').forEach(c=>c.classList.add('on'));}
+function clearSplit(){document.querySelectorAll('#chips-split .chip').forEach(c=>c.classList.remove('on'));}
+
+async function saveExpense(){
+  const b=cur();
+  const desc=document.getElementById('i-desc').value.trim()||[...document.querySelectorAll('#chips-desc-preset .chip.on')].map(c=>c.textContent)[0]||'';
+  const amount=parseInt(S.padVal||'0');
+  const payer=[...document.querySelectorAll('#chips-payer .chip.on')].map(c=>c.textContent)[0]||'';
+  const splits=getChips('chips-split');
+  const expId=document.getElementById('i-exp-id').value;
+  if(!desc){toast('請輸入或選擇說明 📝');return;}
+  if(!amount||amount<=0){toast('請輸入金額 💰');return;}
+  if(!payer){toast('請選擇付款人 👤');return;}
+  if(!splits.length){toast('請選擇分攤對象 👥');return;}
+  b.expenses=b.expenses||[];
+  if(expId){
+    const idx=b.expenses.findIndex(e=>e.id===expId);
+    if(idx>-1)b.expenses[idx]={...b.expenses[idx],desc,amount,payer,splits};
+    apiFetch('/splitbill/expense/edit','POST',{groupId:S.gid,bookId:b.id,expense:b.expenses[idx]});
+    toast('支出已更新 ✓');
+  } else {
+    const exp={id:Date.now().toString(),desc,amount,payer,splits,createdAt:new Date().toISOString()};
+    b.expenses.push(exp);
+    apiFetch('/splitbill/expense','POST',{groupId:S.gid,bookId:b.id,expense:exp});
+    toast(`已記錄 ${desc} $${amount} ✓`);
+  }
+  saveLocal();closeM('m-exp');drawExp();drawSettle();
+}
+
+function delExpense(){
+  const expId=document.getElementById('i-exp-id').value;if(!expId)return;
+  S.pendingDelExp=expId;
+  openM('m-confirm');
+  document.getElementById('confirm-msg').textContent='確定要刪除這筆支出嗎？';
+  document.getElementById('confirm-ok').onclick=()=>{
+    const b=cur();
+    b.expenses=(b.expenses||[]).filter(e=>e.id!==S.pendingDelExp);
+    saveLocal();
+    apiFetch('/splitbill/expense/delete','POST',{groupId:S.gid,bookId:b.id,expId:S.pendingDelExp});
+    closeM('m-confirm');closeM('m-exp');toast('已刪除');drawExp();drawSettle();
+  };
+}
+
+function closeBk(id){
+  S.pendingBkId=id;openM('m-confirm');
+  document.getElementById('confirm-msg').textContent='封存後帳本無法新增支出，但可以隨時重新開啟。確定封存嗎？';
+  document.getElementById('confirm-ok').onclick=()=>{
+    const b=S.books.find(x=>x.id===S.pendingBkId);
+    if(b)b.closed=true;
+    saveLocal();
+    apiFetch('/splitbill/book/close','POST',{groupId:S.gid,bookId:S.pendingBkId});
+    document.getElementById('fab').style.display='none';
+    closeM('m-confirm');drawExp();drawHome();toast('帳本已封存 🔒');
+  };
+}
+
+function reopenBk(id){
+  S.pendingBkId=id;openM('m-confirm');
+  document.getElementById('confirm-msg').textContent='確定要重新開啟這個帳本嗎？';
+  document.getElementById('confirm-ok').onclick=()=>{
+    const b=S.books.find(x=>x.id===S.pendingBkId);
+    if(b)b.closed=false;
+    saveLocal();
+    apiFetch('/splitbill/book/reopen','POST',{groupId:S.gid,bookId:S.pendingBkId});
+    document.getElementById('fab').style.display='flex';
+    closeM('m-confirm');drawExp();drawHome();toast('帳本已重新開啟 📖');
+  };
+}
+
+/* ── 結算頁 ── */
+function drawSettle(){
+  const el=document.getElementById('s-settle');
+  const b=cur();if(!b)return;
+  const exps=b.expenses||[];
+  if(!exps.length){el.innerHTML=`<div class="empty"><em>🧮</em><strong>還沒有支出</strong><span>先去「支出」頁新增記錄！</span></div>`;return;}
+  const paid={},owed={};
+  b.members.forEach(m=>{paid[m]=0;owed[m]=0;});
+  exps.forEach(e=>{
+    paid[e.payer]=(paid[e.payer]||0)+e.amount;
+    const sh=e.amount/e.splits.length;
+    e.splits.forEach(m=>{owed[m]=(owed[m]||0)+sh;});
+  });
+  const net={};b.members.forEach(m=>{net[m]=Math.round((paid[m]||0)-(owed[m]||0));});
+  const txns=calcT(net);
+  const total=exps.reduce((s,e)=>s+e.amount,0);
+
+  let h=`<div class="card">
+    <div class="card-hd"><div class="card-title">📊 每人明細</div></div>
+    <div class="card-bd">
+      ${b.members.map(m=>{
+        const n=net[m]||0;
+        const c=n>0?'var(--green-d)':n<0?'var(--red)':'var(--brown3)';
+        return `<div class="smry-row">
+          <div style="font-weight:700">${m}</div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--brown3)">付 $${(paid[m]||0).toLocaleString()} / 應付 $${Math.round(owed[m]||0).toLocaleString()}</div>
+            <div style="font-size:14px;font-weight:900;color:${c};font-family:'Nunito',sans-serif">${n>0?'多付 $'+n:n===0?'剛好平':'欠 $'+(-n)}</div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="text-align:right;padding-top:6px;font-size:11px;color:var(--brown3)">總支出 $${total.toLocaleString()}</div>
+    </div>
+  </div>`;
+
+  if(txns.length){
+    h+=`<div class="card">
+      <div class="card-hd"><div class="card-title">💸 誰要轉帳給誰</div></div>
+      <div>${txns.map(t=>`<div class="settle-row">
+        <div style="font-size:14px;font-weight:700">${t.from}</div>
+        <div style="color:var(--brown3)">→</div>
+        <div style="font-size:14px;font-weight:700;color:var(--green-d)">${t.to}</div>
+        <div style="margin-left:auto;font-size:16px;font-weight:900;color:var(--red);font-family:'Nunito',sans-serif">$${t.amount.toLocaleString()}</div>
+      </div>`).join('')}</div>
+    </div>`;
+  } else {
+    h+=`<div class="card" style="padding:22px;text-align:center">
+      <div style="font-size:30px;margin-bottom:6px">🎉</div>
+      <div style="font-size:15px;font-weight:700;color:var(--green-d)">大家都算平了！</div>
+    </div>`;
+  }
+  el.innerHTML=h;
+}
+
+function calcT(net){
+  const cr=[],dt=[];
+  Object.entries(net).forEach(([n,v])=>{if(v>0)cr.push({n,v});else if(v<0)dt.push({n,v:-v});});
+  cr.sort((a,b)=>b.v-a.v);dt.sort((a,b)=>b.v-a.v);
+  const t=[];let i=0,j=0;
+  while(i<cr.length&&j<dt.length){
+    const c=cr[i],d=dt[j],a=Math.min(c.v,d.v);
+    if(a>=1)t.push({from:d.n,to:c.n,amount:Math.round(a)});
+    c.v-=a;d.v-=a;if(c.v<1)i++;if(d.v<1)j++;
+  }
+  return t;
+}
+
+/* ── Helpers ── */
+function openM(id){document.getElementById(id).classList.add('show');}
+function closeM(id){document.getElementById(id).classList.remove('show');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+function togChip(el){el.classList.toggle('on');}
+function getChips(id){return[...document.getElementById(id).querySelectorAll('.chip.on:not(.del-chip)')].map(c=>c.textContent.trim());}
+function addExtraChip(chipsId,inputId){
+  const v=document.getElementById(inputId).value.trim();if(!v)return;
+  const el=document.getElementById(chipsId);
+  if([...el.querySelectorAll('.chip')].some(c=>c.textContent.trim()===v)){toast('已存在');return;}
+  const chip=document.createElement('div');
+  chip.className='chip on';chip.textContent=v;chip.onclick=()=>togChip(chip);
+  el.appendChild(chip);
+  document.getElementById(inputId).value='';
+  if(chipsId==='chips-bk')updBkPrev();
+}
+document.querySelectorAll('.m-bg').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
+
+init();
+</script>
+</body>
+</html>
