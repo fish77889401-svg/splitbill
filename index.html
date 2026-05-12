@@ -299,19 +299,20 @@ async function init(){
       const p=await liff.getProfile();
       const ctx=liff.getContext();
       S.user=p;
-      // 優先用 LIFF context 的群組 ID
+      // debug: 顯示 context 資訊
       const ctxGid=ctx?.groupId||ctx?.roomId||null;
-      if(ctxGid){
-        S.gid=ctxGid;
-      } else {
-        // 沒有 context 群組 ID，用 URL 參數或預設值
-        S.gid=_gid;
-      }
+      console.log('LIFF ctx:', JSON.stringify(ctx));
+      console.log('ctxGid:', ctxGid, '_gid:', _gid);
+      // 優先用 URL 參數的群組 ID（liff.state 帶進來的）
+      // 因為 LINE Login channel 的 context 沒有 groupId
+      S.gid = _gid !== 'default' ? _gid : (ctxGid || 'default');
+      console.log('最終 gid:', S.gid);
     } else {
       S.user={userId:'local',displayName:'訪客'};
       S.gid=_gid;
     }
   }catch(e){
+    console.log('LIFF error:', e);
     S.user={userId:'err',displayName:'訪客'};
     S.gid=_gid;
   }
