@@ -261,7 +261,9 @@ const LIFF_ID='2010052774-AyGqRPDF';
 const API='https://linebot-mktx.onrender.com';
 const DESCS=['晚餐','午餐','早餐','飲料','計程車','交通費','門票','住宿','購物','零食','咖啡','超商'];
 const EMOJIS=[['餐','🍽️'],['飯','🍱'],['車','🚗'],['計程','🚕'],['住','🏨'],['購','🛍️'],['飲','🧋'],['咖啡','☕'],['超商','🏪'],['票','🎟️'],['禮','🎁'],['零食','🍿']];
-let S={user:null,gid:'default',books:[],curId:null,gMbrs:[],pv:'',pDel:null,pBk:null};
+// 從 URL 參數讀取群組 ID（副班長傳來的連結會帶 ?gid=xxx）
+const _urlGid = new URLSearchParams(location.search).get('gid');
+let S={user:null,gid:_urlGid||'default',books:[],curId:null,gMbrs:[],pv:'',pDel:null,pBk:null};
 
 // ── Init ──────────────────────────────────────────────────
 async function init(){
