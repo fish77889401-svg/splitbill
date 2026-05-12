@@ -298,11 +298,23 @@ async function init(){
       if(!liff.isLoggedIn()){liff.login();return;}
       const p=await liff.getProfile();
       const ctx=liff.getContext();
-      S.user=p; S.gid=ctx?.groupId||ctx?.roomId||'default';
+      S.user=p;
+      // 優先用 LIFF context 的群組 ID
+      const ctxGid=ctx?.groupId||ctx?.roomId||null;
+      if(ctxGid){
+        S.gid=ctxGid;
+      } else {
+        // 沒有 context 群組 ID，用 URL 參數或預設值
+        S.gid=_gid;
+      }
     } else {
       S.user={userId:'local',displayName:'訪客'};
+      S.gid=_gid;
     }
-  }catch(e){ S.user={userId:'err',displayName:'訪客'}; }
+  }catch(e){
+    S.user={userId:'err',displayName:'訪客'};
+    S.gid=_gid;
+  }
   await Promise.all([loadBooks(),loadMbrs()]).catch(()=>{});
   drawHome();
 }
