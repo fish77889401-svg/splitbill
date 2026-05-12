@@ -295,13 +295,29 @@ let S={user:null,gid:'default',books:[],curId:null,gMembers:[],padVal:'',pending
 async function init(){
   try{
     await liff.init({liffId:LIFF_ID});
-    if(!liff.isLoggedIn()){liff.login();return;}
-    const[p,ctx]=await Promise.all([liff.getProfile(),Promise.resolve(liff.getContext())]);
-    S.user=p;S.gid=ctx?.groupId||'default';
-    const av=document.getElementById('av');
-    if(p.pictureUrl){av.src=p.pictureUrl;av.style.display='block';}
-  }catch(e){S.user={userId:'demo',displayName:'測試'};}
-  await Promise.all([loadBooks(),loadGMembers()]);
+    if(liff.isInClient()){
+      // 在 LINE 裡面
+      if(!liff.isLoggedIn()){liff.login();return;}
+      const[p,ctx]=await Promise.all([liff.getProfile(),Promise.resolve(liff.getContext())]);
+      S.user=p;
+      S.gid=ctx?.groupId||ctx?.roomId||'default';
+      const av=document.getElementById('av');
+      if(p.pictureUrl){av.src=p.pictureUrl;av.style.display='block';}
+    } else {
+      // 不在 LINE（測試用）
+      S.user={userId:'test_'+Date.now(),displayName:'測試用戶'};
+      S.gid='default';
+    }
+  }catch(e){
+    console.log('LIFF init error:',e);
+    S.user={userId:'fallback_'+Date.now(),displayName:'用戶'};
+    S.gid='default';
+  }
+  try{
+    await Promise.all([loadBooks(),loadGMembers()]);
+  }catch(e){
+    console.log('Load error:',e);
+  }
   document.getElementById('loading').style.display='none';
   document.getElementById('app').style.display='block';
   drawHome();
