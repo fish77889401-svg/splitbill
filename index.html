@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>副班長分帳</title>
-<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -293,34 +293,42 @@ let S={user:null,gid:'default',books:[],curId:null,gMembers:[],padVal:'',pending
 
 /* ── Init ── */
 async function init(){
-  try{
-    await liff.init({liffId:LIFF_ID});
-    if(liff.isInClient()){
-      // 在 LINE 裡面
-      if(!liff.isLoggedIn()){liff.login();return;}
-      const[p,ctx]=await Promise.all([liff.getProfile(),Promise.resolve(liff.getContext())]);
-      S.user=p;
-      S.gid=ctx?.groupId||ctx?.roomId||'default';
-      const av=document.getElementById('av');
-      if(p.pictureUrl){av.src=p.pictureUrl;av.style.display='block';}
-    } else {
-      // 不在 LINE（測試用）
-      S.user={userId:'test_'+Date.now(),displayName:'測試用戶'};
-      S.gid='default';
-    }
-  }catch(e){
-    console.log('LIFF init error:',e);
-    S.user={userId:'fallback_'+Date.now(),displayName:'用戶'};
-    S.gid='default';
-  }
-  try{
-    await Promise.all([loadBooks(),loadGMembers()]);
-  }catch(e){
-    console.log('Load error:',e);
-  }
+  // 先立刻顯示 app，不等 LIFF
   document.getElementById('loading').style.display='none';
   document.getElementById('app').style.display='block';
   drawHome();
+
+  // 背景初始化 LIFF
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(liff.isInClient()){
+      if(!liff.isLoggedIn()){
+        liff.login();
+        return;
+      }
+      const p = await liff.getProfile();
+      const ctx = liff.getContext();
+      S.user = p;
+      S.gid = ctx?.groupId || ctx?.roomId || 'default';
+      const av = document.getElementById('av');
+      if(p.pictureUrl){ av.src=p.pictureUrl; av.style.display='block'; }
+    } else {
+      S.user = {userId:'local_'+Date.now(), displayName:'訪客'};
+      S.gid = 'default';
+    }
+  } catch(e){
+    console.log('LIFF:', e);
+    S.user = {userId:'err_'+Date.now(), displayName:'訪客'};
+    S.gid = 'default';
+  }
+
+  // LIFF 完成後重新載入資料
+  try{
+    await Promise.all([loadBooks(), loadGMembers()]);
+    drawHome();
+  }catch(e){
+    console.log('Load:', e);
+  }
 }
 
 async function apiFetch(path,method='GET',body=null){
