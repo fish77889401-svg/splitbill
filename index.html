@@ -261,30 +261,34 @@ const LIFF_ID='2010052774-AyGqRPDF';
 const API='https://linebot-mktx.onrender.com';
 const DESCS=['晚餐','午餐','早餐','飲料','計程車','交通費','門票','住宿','購物','零食','咖啡','超商'];
 const EMOJIS=[['餐','🍽️'],['飯','🍱'],['車','🚗'],['計程','🚕'],['住','🏨'],['購','🛍️'],['飲','🧋'],['咖啡','☕'],['超商','🏪'],['票','🎟️'],['禮','🎁'],['零食','🍿']];
-// 從 URL 參數讀取群組 ID
-// 支援 ?gid=xxx 和 liff.state=%3Fgid%3Dxxx 兩種格式
-function getGidFromUrl(){
-  // 先試直接參數
+// 群組 ID 管理：從 URL 讀取後存入 localStorage，下次直接讀取
+function getGid(){
+  // 1. 先試 URL 直接參數 ?gid=xxx
   const direct = new URLSearchParams(location.search).get('gid');
-  if(direct) return direct;
-  // 再試 liff.state
+  if(direct && direct !== 'default'){
+    localStorage.setItem('sb_gid', direct);
+    return direct;
+  }
+  // 2. 試 liff.state=%3Fgid%3Dxxx
   const state = new URLSearchParams(location.search).get('liff.state');
   if(state){
     try{
       const decoded = decodeURIComponent(state);
-      const inner = new URLSearchParams(decoded.replace(/^\?/,''));
+      const inner = new URLSearchParams(decoded.replace(/^[?#]/,''));
       const g = inner.get('gid');
-      if(g) return g;
+      if(g && g !== 'default'){
+        localStorage.setItem('sb_gid', g);
+        return g;
+      }
     }catch(e){}
   }
-  // 試 hash
-  const hash = new URLSearchParams(location.hash.replace(/^#/,''));
-  const hashGid = hash.get('gid');
-  if(hashGid) return hashGid;
+  // 3. 從 localStorage 讀取上次的群組 ID
+  const saved = localStorage.getItem('sb_gid');
+  if(saved && saved !== 'default') return saved;
   return 'default';
 }
-const _urlGid = getGidFromUrl();
-let S={user:null,gid:_urlGid,books:[],curId:null,gMbrs:[],pv:'',pDel:null,pBk:null};
+const _gid = getGid();
+let S={user:null,gid:_gid,books:[],curId:null,gMbrs:[],pv:'',pDel:null,pBk:null};
 
 // ── Init ──────────────────────────────────────────────────
 async function init(){
